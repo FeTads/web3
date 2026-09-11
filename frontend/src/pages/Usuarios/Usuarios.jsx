@@ -162,12 +162,13 @@ function Usuarios() {
                 </ul>
             )}
 
-            <UsuarioFormModal
-                isOpen={isModalOpen}
-                usuario={usuarioEmEdicao}
-                onClose={handleCloseModal}
-                onSave={handleSalvar}
-            />
+            {isModalOpen && (
+                <UsuarioFormModal
+                    usuario={usuarioEmEdicao}
+                    onClose={handleCloseModal}
+                    onSave={handleSalvar}
+                />
+            )}
         </div>
     );
 }

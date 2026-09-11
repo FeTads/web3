@@ -1,22 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Modal from '../Modal/Modal';
 import './UsuarioFormModal.css';
 
-function UsuarioFormModal({ isOpen, usuario, onClose, onSave }) {
-    const [nome, setNome] = useState('');
-    const [email, setEmail] = useState('');
+function UsuarioFormModal({ usuario, onClose, onSave }) {
+    const [nome, setNome] = useState(usuario?.nome || '');
+    const [email, setEmail] = useState(usuario?.email || '');
     const [erro, setErro] = useState(null);
     const [salvando, setSalvando] = useState(false);
 
     const isEdicao = Boolean(usuario);
-
-    useEffect(() => {
-        if (isOpen) {
-            setNome(usuario?.nome || '');
-            setEmail(usuario?.email || '');
-            setErro(null);
-        }
-    }, [isOpen, usuario]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,7 +31,7 @@ function UsuarioFormModal({ isOpen, usuario, onClose, onSave }) {
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={isEdicao ? 'Editar Usuário' : 'Novo Usuário'}>
+        <Modal isOpen onClose={onClose} title={isEdicao ? 'Editar Usuário' : 'Novo Usuário'}>
             <form onSubmit={handleSubmit} className="usuario-form">
                 <label className="form-field">
                     <span>Nome</span>
