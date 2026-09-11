@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { getUsuarios, getUsuario, updateUsuario, deleteUsuario } from '../../services/usuarioService';
+import { Plus, Search, X, Pencil, Trash2 } from 'lucide-react';
+import { getUsuarios, getUsuario, createUsuario, updateUsuario, deleteUsuario } from '../../services/usuarioService';
+import UsuarioFormModal from '../../components/UsuarioFormModal/UsuarioFormModal';
 
 function Usuarios() {
     const [users, setUsers] = useState([]);
@@ -7,40 +9,82 @@ function Usuarios() {
     const [error, setError] = useState(null);
 
     const [idBusca, setIdBusca] = useState('');
+    const [buscaAtiva, setBuscaAtiva] = useState(false);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [usuarioEmEdicao, setUsuarioEmEdicao] = useState(null);
+
+    const fetchUsuarios = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const dados = await getUsuarios();
+            setUsers(dados.data || []);
+        } catch (err) {
+            console.error(err);
+            setError(err.response?.data?.err || err.message || 'Erro ao buscar usuários');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchUsuarios = async () => {
-            try {
-                const dados = await getUsuarios();
-                setUsers(dados.data || []);
-            } catch (err) {
-                console.error(err);
-                setError(err.response?.data?.err || err.message || 'Erro ao buscar usuários');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchUsuarios();
     }, []);
 
     const handleBuscarPorId = async () => {
-        const usuario = await getUsuario(idBusca);
-        setUsers([usuario]);
+        if (!idBusca.trim()) return;
+
+        setLoading(true);
+        setError(null);
+        try {
+            const usuario = await getUsuario(idBusca.trim());
+            setUsers([usuario]);
+        } catch (err) {
+            console.error(err);
+            setUsers([]);
+            setError(err.response?.data?.err || 'Usuário não encontrado');
+        } finally {
+            setBuscaAtiva(true);
+            setLoading(false);
+        }
     };
 
-    const handleEdit = async (user) => {
-        const newName = prompt('Digite o novo nome do usuário:', user.nome);
-        const newEmail = prompt('Digite o novo email do usuário:', user.email);
-        
-        if (newName || newEmail) {
-            try {
-                const updatedUser = await updateUsuario(user.id, { nome: newName, email: newEmail });
-                setUsers(users.map(u => u.id === user.id ? updatedUser : u));
-            } catch (err) {
-                console.error(err);
-                setError(err.response?.data?.err || err.message || 'Erro ao atualizar usuário');
-            }
+    const handleLimparBusca = () => {
+        setIdBusca('');
+        setBuscaAtiva(false);
+        fetchUsuarios();
+    };
+
+    const handleNovoUsuario = () => {
+        setUsuarioEmEdicao(null);
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (user) => {
+        setUsuarioEmEdicao(user);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setUsuarioEmEdicao(null);
+    };
+
+    const handleSalvar = async (dadosForm) => {
+        if (usuarioEmEdicao) {
+            await updateUsuario(usuarioEmEdicao.id, dadosForm);
+        } else {
+            await createUsuario(dadosForm);
+        }
+
+        setIsModalOpen(false);
+        setUsuarioEmEdicao(null);
+
+        if (buscaAtiva) {
+            await handleBuscarPorId();
+        } else {
+            await fetchUsuarios();
         }
     };
 
@@ -57,10 +101,34 @@ function Usuarios() {
         }
     };
 
-    return(
+    return (
         <div className="page-container">
-            <h1>Lista de Usuarios</h1>
-            
+            <div className="page-header-row">
+                <h1>Lista de Usuários</h1>
+                <button className="btn-primary" onClick={handleNovoUsuario}>
+                    <Plus size={18} /> Novo Usuário
+                </button>
+            </div>
+
+            <div className="busca-row">
+                <input
+                    type="number"
+                    className="busca-input"
+                    placeholder="Buscar por ID..."
+                    value={idBusca}
+                    onChange={(e) => setIdBusca(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleBuscarPorId()}
+                />
+                <button className="btn-secondary" onClick={handleBuscarPorId}>
+                    <Search size={16} /> Buscar
+                </button>
+                {buscaAtiva && (
+                    <button className="btn-secondary" onClick={handleLimparBusca}>
+                        <X size={16} /> Ver todos
+                    </button>
+                )}
+            </div>
+
             {loading && <div style={styles.message}>Carregando usuários...</div>}
 
             {error && <div style={styles.message}>Ops! {error}</div>}
@@ -82,13 +150,24 @@ function Usuarios() {
                                 ID #{user.id}
                             </div>
                             <div style={styles.userActions}>
-                                <button style={styles.editButton} onClick={() => handleEdit(user)}>Editar</button>
-                                <button style={styles.deleteButton} onClick={() => handleDelete(user.id)}>Excluir</button>
+                                <button style={styles.editButton} onClick={() => handleEdit(user)}>
+                                    <Pencil size={14} /> Editar
+                                </button>
+                                <button style={styles.deleteButton} onClick={() => handleDelete(user.id)}>
+                                    <Trash2 size={14} /> Excluir
+                                </button>
                             </div>
                         </li>
                     ))}
                 </ul>
             )}
+
+            <UsuarioFormModal
+                isOpen={isModalOpen}
+                usuario={usuarioEmEdicao}
+                onClose={handleCloseModal}
+                onSave={handleSalvar}
+            />
         </div>
     );
 }
@@ -145,19 +224,25 @@ const styles = {
         gap: '8px',
     },
     editButton: {
-        padding: '5px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '6px 12px',
         backgroundColor: '#4CAF50',
         color: 'white',
         border: 'none',
-        borderRadius: '4px',
+        borderRadius: '6px',
         cursor: 'pointer',
     },
     deleteButton: {
-        padding: '5px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '6px 12px',
         backgroundColor: '#f44336',
         color: 'white',
         border: 'none',
-        borderRadius: '4px',
+        borderRadius: '6px',
         cursor: 'pointer',
     },
 }
