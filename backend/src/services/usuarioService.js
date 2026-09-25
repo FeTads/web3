@@ -1,3 +1,4 @@
+const bcrypt = require('bcrypt');
 const Usuario = require('../models/Usuario');
 
 const obterTodosUsuarios = async () => {
@@ -9,7 +10,8 @@ const obterUsuarioPorId = async (id) => {
 };
 
 const criarUsuario = async (data) => {
-    return await Usuario.create(data);
+    const senhaHash = await bcrypt.hash(data.senha, 10);
+    return await Usuario.create({ ...data, senha: senhaHash });
 };
 
 const atualizarUsuario = async (id, data) => {

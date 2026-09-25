@@ -23,9 +23,9 @@ const buscarUsuario = async (req, res) => {
 }
 
 const criarUsuario = async (req, res) => {
-    const { nome, email } = req.body;
+    const { nome, email, senha } = req.body;
     try {
-        const novoUsuario = await usuarioService.criarUsuario({ nome, email });
+        const novoUsuario = await usuarioService.criarUsuario({ nome, email, senha });
         res.status(201).json(novoUsuario);
     } catch(err) {
         res.status(500).json({ err: 'Erro interno ao criar usuario' });
